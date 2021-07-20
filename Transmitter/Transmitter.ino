@@ -15,6 +15,7 @@
 byte dataBuffer[FRAME_SIZE];
 byte frameBuffer[FRAME_SIZE];
 const float bitTimeMs = 1000.0 / TX_RATE;
+byte idleBit = 1;
 
 // ----------- functions' headers ---------------------------------------------------------------------
 void byte2bits(byte b, int* bits);
@@ -42,6 +43,10 @@ void loop() {
       printFrameBuffer();
     }
     sendFrame(frameBuffer);
+  } else {
+    digitalWrite(LED_PIN, idleBit);
+    idleBit = !idleBit;
+    delay(bitTimeMs);
   }
 }
 

@@ -28,6 +28,10 @@ void setup() {
 
 void loop() {
   waitStartByte();
+//  readSyncByte();
+//  readData();
+//  readParity();
+//  readEndByte();
 }
 
 // ----------- other functions ----------------------------------------------------------------------
