@@ -3,7 +3,7 @@
 #define SYNC_BYTE 0xAA  // used to synchronize the receiver
 #define END_BYTE 0xFD   // last byte on a frame (logical inverse of START_BYTE)
 #define LED_PIN 13      // Arduino digital pin to connect the transmitter LED
-#define TX_RATE 10      // Transmission rate in bps
+#define TX_RATE 961.5   // Transmission rate in bps
 #define DEBUG_ON true   // Used to print debug messages on the serial monitor
 
 /**
