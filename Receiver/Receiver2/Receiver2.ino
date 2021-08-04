@@ -3,8 +3,8 @@
 #define SYNC_BYTE 0xAA     // used to synchronize the receiver
 #define END_BYTE 0xFD      // last byte on a frame (logical inverse of START_BYTE)
 #define PRESCALER 0x07     // ADC prescaler value (values in the table - 0x07 -> 9615 SPS)
-#define TX_RATE 961.5      // Transmission rate in bps
-#define NUM_SAMPLES_BIT 10 // number of samples per received bit
+#define TX_RATE 96.15      // Transmission rate in bps
+#define NUM_SAMPLES_BIT 100// number of samples per received bit
 #define THRESHOLD 2.5      // Threshold value, in Volts, to decide wether the incoming bit is 0 or 1
 #define DEBUG_ON true      // Used to print debug messages on the serial monitor
 
@@ -14,7 +14,7 @@
 */
 
 // ----------- global variables -----------------------------------------------------------------------
-int sampleSum = 0;
+long sampleSum = 0;
 bool fullSampleBuffer = false;
 unsigned int sampleCounter = 0;
 
@@ -22,7 +22,7 @@ int bitSum = 0;
 bool fullBitBuffer = false;
 unsigned int bitCounter = 0;
 
-byte frameBuffer[FRAME_SIZE];
+int frameBuffer[FRAME_SIZE];
 bool fullFrameBuffer = false;
 unsigned int frameCounter = 0;
 
@@ -33,10 +33,11 @@ void verifyAndSendFrame();
 // ----------- Arduino's functions --------------------------------------------------------------------
 void setup() {
   Serial.begin(9600);
+  pinMode(A1, INPUT);
 
   ADMUX = 0x00;
   ADMUX |= 0x40; // set the reference voltage as aVCC
-  ADMUX |= 0x00; // pick analog input A0
+  ADMUX |= 0x01; // pick analog input A0
  
   ADCSRA = 0x00;
   ADCSRA |= PRESCALER; // set the sampling frequency (prescaler) 128
@@ -54,21 +55,17 @@ void setup() {
 }
 
 ISR(ADC_vect) {
-  int sample = 0x00;
-
-  sample = ADCL;        // read the least significant byte
-  sample += ADCH << 8;  // read the most significant byte
-
+  int sample = ADCL + (ADCH << 8);
   if (!fullSampleBuffer) {
     if (sampleCounter < NUM_SAMPLES_BIT) {
       sampleSum += sample;
       sampleCounter++;
     }
-
     if (sampleCounter == NUM_SAMPLES_BIT) {
       fullSampleBuffer = true;
+      sampleCounter = 0;
     }
- }
+  }
 }
 
 void loop() {
@@ -79,12 +76,12 @@ void loop() {
 // ----------- other functions ----------------------------------------------------------------------
 void pushByteIntoFrame() {
   if (fullSampleBuffer) {
-    byte bitVal;
-    int sampleSumCopy = sampleSum;
+    int bitVal;
+    long sampleSumCopy = sampleSum;
     sampleSum = 0;
     fullSampleBuffer = false;
     if (bitCounter < 8) {
-      bitVal = (float) sampleSum * 5.0 / (1023.0 *NUM_SAMPLES_BIT) >= THRESHOLD;
+      bitVal = sampleSumCopy * 5.0 / (1023.0 * NUM_SAMPLES_BIT) >= THRESHOLD;
       bitSum |= bitVal << bitCounter;
       bitCounter++;
     }
@@ -99,13 +96,18 @@ void pushByteIntoFrame() {
 
 void verifyAndSendFrame() {
   if (frameCounter == FRAME_SIZE) {
-    bool isFrame = (frameBuffer[0] & START_BYTE) &&
-                   (frameBuffer[1] & SYNC_BYTE) &&
-                   (frameBuffer[FRAME_SIZE - 2] & 0x00 || frameBuffer[FRAME_SIZE - 2] & 0x01) &&
-                   (frameBuffer[FRAME_SIZE - 1] & END_BYTE);
+    for (int i = 0; i < FRAME_SIZE; i++) {
+      Serial.print(frameBuffer[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+    bool isFrame = (frameBuffer[0] == START_BYTE) &&
+                   (frameBuffer[1] == SYNC_BYTE) &&
+                   (frameBuffer[FRAME_SIZE - 2] == 0x00 || frameBuffer[FRAME_SIZE - 2] == 0x01) &&
+                   (frameBuffer[FRAME_SIZE - 1] == END_BYTE);
    if (isFrame) {
     for (int i = 2; i < FRAME_SIZE - 2; i++) {
-      Serial.write(frameBuffer[i]);
+      Serial.print(frameBuffer[i]);
     }
     frameCounter = 0;
    } else {
