@@ -22,7 +22,7 @@ int bitSum = 0;
 bool fullBitBuffer = false;
 unsigned int bitCounter = 0;
 
-byte frameBuffer[FRAME_SIZE];
+int frameBuffer[FRAME_SIZE];
 bool fullFrameBuffer = false;
 unsigned int frameCounter = 0;
 
@@ -32,11 +32,12 @@ void verifyAndSendFrame();
 
 // ----------- Arduino's functions --------------------------------------------------------------------
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
+  pinMode(A1, INPUT);
 
   ADMUX = 0x00;
   ADMUX |= 0x40; // set the reference voltage as aVCC
-  ADMUX |= 0x00; // pick analog input A0
+  ADMUX |= 0x01; // pick analog input A0
  
   ADCSRA = 0x00;
   ADCSRA |= PRESCALER; // set the sampling frequency (prescaler) 128
@@ -64,7 +65,7 @@ ISR(ADC_vect) {
       fullSampleBuffer = true;
       sampleCounter = 0;
     }
- }
+  }
 }
 
 void loop() {
@@ -80,7 +81,7 @@ void pushByteIntoFrame() {
     sampleSum = 0;
     fullSampleBuffer = false;
     if (bitCounter < 8) {
-      bitVal = ((float) sampleSum * 5.0 / (1023.0 * NUM_SAMPLES_BIT)) >= THRESHOLD;
+      bitVal = ((float) sampleSumCopy * 5.0 / (1023.0 * NUM_SAMPLES_BIT)) >= THRESHOLD;
       bitSum |= (bitVal << bitCounter);
       bitCounter++;
     }
@@ -95,7 +96,14 @@ void pushByteIntoFrame() {
 
 void verifyAndSendFrame() {
   if (frameCounter == FRAME_SIZE) {
-    if((frameBuffer[0] & START_BYTE) &&
+    if (DEBUG_ON) {
+    	for (int i = 0; i < FRAME_SIZE; i++) {
+	    Serial.print(frameBuffer[i], HEX);
+	    Serial.print(" ");
+	}
+	Serial.println();
+    }
+    if ((frameBuffer[0] & START_BYTE) &&
        (frameBuffer[1] & SYNC_BYTE) &&
        (frameBuffer[FRAME_SIZE - 2] & 0x00 || frameBuffer[FRAME_SIZE - 2] & 0x01) &&
        (frameBuffer[FRAME_SIZE - 1] & END_BYTE)) {
