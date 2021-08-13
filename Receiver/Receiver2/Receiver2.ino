@@ -14,7 +14,7 @@
 */
 
 // ----------- global variables -----------------------------------------------------------------------
-int sampleSum = 0;
+long sampleSum = 0;
 bool fullSampleBuffer = false;
 unsigned int sampleCounter = 0;
 
@@ -54,19 +54,15 @@ void setup() {
 }
 
 ISR(ADC_vect) {
-  int sample = 0x00;
-
-  sample = ADCL;        // read the least significant byte
-  sample += ADCH << 8;  // read the most significant byte
-
+  int sample = ADCL + (ADCH << 8);
   if (!fullSampleBuffer) {
     if (sampleCounter < NUM_SAMPLES_BIT) {
       sampleSum += sample;
       sampleCounter++;
     }
-
     if (sampleCounter == NUM_SAMPLES_BIT) {
       fullSampleBuffer = true;
+      sampleCounter = 0;
     }
  }
 }
@@ -80,12 +76,12 @@ void loop() {
 void pushByteIntoFrame() {
   if (fullSampleBuffer) {
     byte bitVal;
-    int sampleSumCopy = sampleSum;
+    long sampleSumCopy = sampleSum;
     sampleSum = 0;
     fullSampleBuffer = false;
     if (bitCounter < 8) {
-      bitVal = (float) sampleSum * 5.0 / (1023.0 *NUM_SAMPLES_BIT) >= THRESHOLD;
-      bitSum |= bitVal << bitCounter;
+      bitVal = ((float) sampleSum * 5.0 / (1023.0 * NUM_SAMPLES_BIT)) >= THRESHOLD;
+      bitSum |= (bitVal << bitCounter);
       bitCounter++;
     }
     if (bitCounter == 8) {
@@ -99,20 +95,17 @@ void pushByteIntoFrame() {
 
 void verifyAndSendFrame() {
   if (frameCounter == FRAME_SIZE) {
-    bool isFrame = (frameBuffer[0] & START_BYTE) &&
-                   (frameBuffer[1] & SYNC_BYTE) &&
-                   (frameBuffer[FRAME_SIZE - 2] & 0x00 || frameBuffer[FRAME_SIZE - 2] & 0x01) &&
-                   (frameBuffer[FRAME_SIZE - 1] & END_BYTE);
-   if (isFrame) {
-    for (int i = 2; i < FRAME_SIZE - 2; i++) {
-      Serial.write(frameBuffer[i]);
+    if((frameBuffer[0] & START_BYTE) &&
+       (frameBuffer[1] & SYNC_BYTE) &&
+       (frameBuffer[FRAME_SIZE - 2] & 0x00 || frameBuffer[FRAME_SIZE - 2] & 0x01) &&
+       (frameBuffer[FRAME_SIZE - 1] & END_BYTE)) {
+      for (int i = 2; i < FRAME_SIZE - 2; i++) Serial.write(frameBuffer[i]);
+      frameCounter = 0;
+    } else {
+      for (int i = 1; i < FRAME_SIZE; i++) {
+        frameBuffer[i - 1] = frameBuffer[i];
+      }
+      frameCounter = FRAME_SIZE - 1;
     }
-    frameCounter = 0;
-   } else {
-    for (int i = 1; i < FRAME_SIZE; i++) {
-      frameBuffer[i - 1] = frameBuffer[i];
-    }
-    frameCounter = FRAME_SIZE - 1;
-   }
  }
 }

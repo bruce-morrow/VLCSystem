@@ -14,7 +14,7 @@
 // ----------- global variables -----------------------------------------------------------------------
 byte dataBuffer[FRAME_SIZE];
 byte frameBuffer[FRAME_SIZE];
-const float bitTimeMs = 1000.0 / TX_RATE;
+const unsigned int bitTimeUs = 1000000.0 / TX_RATE;
 byte idleBit = 1;
 
 // ----------- functions' headers ---------------------------------------------------------------------
@@ -46,7 +46,7 @@ void loop() {
   } else {
     digitalWrite(LED_PIN, idleBit);
     idleBit = !idleBit;
-    delay(bitTimeMs);
+    delayMicroseconds(bitTimeUs);
   }
 }
 
@@ -75,7 +75,7 @@ void sendFrame(byte* frame) {
       int b = bits[j];
       if (b == 0) digitalWrite(LED_PIN, LOW);
       else digitalWrite(LED_PIN, HIGH);
-      delay(bitTimeMs);  // TODO: this should later be changed to an interruption
+      delayMicroseconds(bitTimeUs);  // TODO: this should later be changed to an interruption
     }
   }
   if (DEBUG_ON) {
