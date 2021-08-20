@@ -2,9 +2,9 @@
 #define START_BYTE 0x02    // first byte on a frame
 #define SYNC_BYTE 0xAA     // used to synchronize the receiver
 #define END_BYTE 0xFD      // last byte on a frame (logical inverse of START_BYTE)
-#define PRESCALER 0x07     // ADC prescaler value (values in the table - 0x07 -> 9615 SPS)
+#define PRESCALER 0x01     // ADC prescaler value (values in the table - 0x07 -> 9615 SPS)
 #define TX_RATE 1000       // Transmission rate in bps
-#define NUM_SAMPLES_BIT 10 // number of samples per received bit
+#define NUM_SAMPLES_BIT 20 // number of samples per received bit
 #define THRESHOLD 2.5      // Threshold value, in Volts, to decide wether the incoming bit is 0 or 1
 #define PD_PIN 1           // Analog pin connected to the photdiode
 #define DEBUG_ON true      // Used to print debug messages on the serial monitor
@@ -53,7 +53,7 @@ void loop() {
 // ----------- ADC functions ------------------------------------------------------------------------
 void adcSetup() {
   ADCSRA =  bit (ADEN);                                // turn ADC on
-  ADCSRA |= bit (ADPS0) |  bit (ADPS1) | bit (ADPS2);  // Prescaler of 128
+  ADCSRA |= bit (0) |  bit (0) | bit (1);  // Prescaler of 128
   ADMUX  =  bit (REFS0);                               // external 5v reference
 }
 
@@ -70,7 +70,7 @@ int adcReadConversion() {
 
 // ----------- Timer functions ----------------------------------------------------------------------
 void timer1Setup() {
-  Timer1.initialize(1 / (TX_RATE * NUM_SAMPLES_BIT));
+  Timer1.initialize(1000000 / (TX_RATE * NUM_SAMPLES_BIT));
   Timer1.attachInterrupt(sampleBit);
 }
 
@@ -78,7 +78,7 @@ void timer1Setup() {
 void sampleBit() {
   int sample = adcReadConversion();
   adcStartConversion(PD_PIN);
-  Serial.print("Sample = "); Serial.println(sample);
+//  Serial.print("Sample = "); Serial.println(sample);
   if (!fullSampleBuffer) {
     if (sampleCounter < NUM_SAMPLES_BIT) {
       sampleSum += sample;
